@@ -2,10 +2,13 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+public enum State { Standard, Plus, Cross, Up2, Right2, Left2, Down2 }
+
 public class CellularAutomata : MonoBehaviour
 {
     public int[,] currentState;
     public int[,] nextState;
+    public int[,] startingState;
     public int width;
     public int height;
     public GameObject cell;
@@ -15,6 +18,7 @@ public class CellularAutomata : MonoBehaviour
     public bool step;
     public bool run;
     Coroutine lifeCoroutine;
+    [SerializeField] State state;
 
     private void Start()
     {
@@ -35,7 +39,7 @@ public class CellularAutomata : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && !run && !active)
         {
             OnMouseClicked();
         }
@@ -183,6 +187,8 @@ public class CellularAutomata : MonoBehaviour
             return;
         }
 
+        startingState = CopyGrid(currentState);
+
         run = true;
         step = false;
         active = true;
@@ -201,4 +207,84 @@ public class CellularAutomata : MonoBehaviour
             lifeCoroutine = null;
         }
     }
+
+    public void OnSaveButtonPressed()
+    {
+        if (!run && !active)
+        {
+            startingState = CopyGrid(currentState);
+        }
+    }
+
+    public void OnResetButtonPressed()
+    {
+        if (!run && !active)
+        {
+            if (startingState != null)
+            {
+                currentState = CopyGrid(startingState);
+                UpdateRenderer();
+            }
+        }
+        else
+        {
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    SpriteRenderer sr = cells[x, y].GetComponent<SpriteRenderer>();
+                    if (sr != null)
+                    {
+                        if (currentState[x, y] == 1)
+                        {
+                            currentState[x, y] = 0;
+                            sr.color = Color.white;
+                        }
+                    }
+
+                }
+            }
+        }
+    }
+
+    public void OnClearButtonPressed()
+    {
+        if (!run && !active)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    SpriteRenderer sr = cells[x, y].GetComponent<SpriteRenderer>();
+                    if (sr != null)
+                    {
+                        if (currentState[x, y] == 1)
+                        {
+                            currentState[x, y] = 0;
+                            sr.color = Color.white;
+                        }
+                    }
+
+                }
+            }
+        }
+    }
+
+
+
+    int[,] CopyGrid(int[,] source)
+    {
+        int[,] copy = new int[width, height];
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                copy[x, y] = source[x, y];
+            }
+        }
+
+        return copy;
+    }
+
 }
