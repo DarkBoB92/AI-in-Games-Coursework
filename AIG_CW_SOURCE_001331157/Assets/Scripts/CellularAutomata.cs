@@ -20,22 +20,22 @@ public class CellularAutomata : MonoBehaviour
     Coroutine lifeCoroutine;
     [SerializeField] State state;
 
-    private void Start()
-    {
-        currentState = new int[width, height];
-        nextState = new int[width, height];
+    //private void Start()
+    //{
+    //    currentState = new int[width, height];
+    //    nextState = new int[width, height];
 
-        cells = new GameObject[width, height];
+    //    cells = new GameObject[width, height];
 
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                GameObject go = Instantiate(cell, new Vector3(x, y, 0), Quaternion.identity);
-                cells[x, y] = go;
-            }
-        }
-    }
+    //    for (int x = 0; x < width; x++)
+    //    {
+    //        for (int y = 0; y < height; y++)
+    //        {
+    //            GameObject go = Instantiate(cell, new Vector3(x, y, 0), Quaternion.identity);
+    //            cells[x, y] = go;
+    //        }
+    //    }
+    //}
 
     private void Update()
     {
@@ -165,6 +165,27 @@ public class CellularAutomata : MonoBehaviour
             currentState[x, y] = 1 - currentState[x, y];
             UpdateRenderer();
         }
+    }
+
+    public void OnGenerateButtonPressed()
+    {
+        if (width > 0 && height > 0)
+        {
+            currentState = new int[width, height];
+            nextState = new int[width, height];
+
+            cells = new GameObject[width, height];
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    GameObject go = Instantiate(cell, new Vector3(x, y, 0), Quaternion.identity);
+                    cells[x, y] = go;
+                }
+            }
+        }
+
     }
 
     public void OnStepButtonPressed()
