@@ -1,6 +1,6 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public enum State { Standard, Plus, Cross, Up2, Right2, Left2, Down2 }
 
@@ -19,23 +19,9 @@ public class CellularAutomata : MonoBehaviour
     public bool run;
     Coroutine lifeCoroutine;
     [SerializeField] State state;
-
-    //private void Start()
-    //{
-    //    currentState = new int[width, height];
-    //    nextState = new int[width, height];
-
-    //    cells = new GameObject[width, height];
-
-    //    for (int x = 0; x < width; x++)
-    //    {
-    //        for (int y = 0; y < height; y++)
-    //        {
-    //            GameObject go = Instantiate(cell, new Vector3(x, y, 0), Quaternion.identity);
-    //            cells[x, y] = go;
-    //        }
-    //    }
-    //}
+    public TMP_InputField widthField;
+    public TMP_InputField heightField;
+    public bool generated;
 
     private void Update()
     {
@@ -45,7 +31,7 @@ public class CellularAutomata : MonoBehaviour
         }
     }
 
-    public virtual IEnumerator LifeCycle()
+    public IEnumerator LifeCycle()
     {
         while (active)
         {
@@ -55,30 +41,17 @@ public class CellularAutomata : MonoBehaviour
                 {
                     int state = currentState[x, y];
                     int sum = 0;
+                    Vector2Int[] offsets = GetNeighbourOffsets();
 
-                    for (int i = -1; i <= 1; i++)
+                    foreach (Vector2Int offset in offsets)
                     {
-                        for (int j = -1; j <= 1; j++)
-                        {
-                            if (i == 0 && j == 0)
-                            {
-                                continue;
-                            }
+                        int neighborX = (x + offset.x) % width;
+                        if (neighborX < 0) neighborX += width;
 
-                            int neighborX = (x + i) % width;
-                            if (neighborX < 0)
-                            {
-                                neighborX += width;
-                            }
+                        int neighborY = (y + offset.y) % height;
+                        if (neighborY < 0) neighborY += height;
 
-                            int neighborY = (y + j) % height;
-                            if (neighborY < 0)
-                            {
-                                neighborY += height;
-                            }
-
-                            sum += currentState[neighborX, neighborY];
-                        }
+                        sum += currentState[neighborX, neighborY];
                     }
 
                     if (state == 0)
@@ -144,7 +117,68 @@ public class CellularAutomata : MonoBehaviour
         }
     }
 
-    private void OnMouseClicked()
+    Vector2Int[] GetNeighbourOffsets()
+    {
+        switch (state)
+        {
+            case State.Plus: // up/down/left/right
+                return new Vector2Int[]
+                {
+                new Vector2Int(0, 1),
+                new Vector2Int(0, -1),
+                new Vector2Int(1, 0),
+                new Vector2Int(-1, 0),
+                };
+
+            case State.Cross: // diagonals only
+                return new Vector2Int[]
+                {
+                new Vector2Int(-1, 1),
+                new Vector2Int(1, 1),
+                new Vector2Int(-1, -1),
+                new Vector2Int(1, -1),
+                };
+
+            case State.Up2: // 2x3 blocks above
+                return new Vector2Int[]
+                {
+                new Vector2Int(-1, 1), new Vector2Int(0, 1), new Vector2Int(1, 1),
+                new Vector2Int(-1, 2), new Vector2Int(0, 2), new Vector2Int(1, 2),
+                };
+
+            case State.Down2: // 2x3 blocks below
+                return new Vector2Int[]
+                {
+                new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(1, -1),
+                new Vector2Int(-1, -2), new Vector2Int(0, -2), new Vector2Int(1, -2),
+                };
+
+            case State.Right2: // 2x3 blocks right
+                return new Vector2Int[]
+                {
+                new Vector2Int(1, -1), new Vector2Int(1, 0), new Vector2Int(1, 1),
+                new Vector2Int(2, -1), new Vector2Int(2, 0), new Vector2Int(2, 1),
+                };
+
+            case State.Left2: // 2x3 blocks left
+                return new Vector2Int[]
+                {
+                new Vector2Int(-1, -1), new Vector2Int(-1, 0), new Vector2Int(-1, 1),
+                new Vector2Int(-2, -1), new Vector2Int(-2, 0), new Vector2Int(-2, 1),
+                };
+
+            case State.Standard: // classic 
+            default:
+                return new Vector2Int[]
+                {
+                new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(1, -1),
+                new Vector2Int(-1,  0),                      new Vector2Int(1,  0),
+                new Vector2Int(-1,  1), new Vector2Int(0,  1), new Vector2Int(1,  1),
+                };
+        }
+    }
+
+    void OnMouseClicked()
     {
         Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
@@ -169,8 +203,45 @@ public class CellularAutomata : MonoBehaviour
 
     public void OnGenerateButtonPressed()
     {
+        if (string.IsNullOrWhiteSpace(widthField.text.Trim()) && string.IsNullOrWhiteSpace(heightField.text.Trim()))
+        {
+            width = 10;
+            height = 10;
+        }
+        else if(string.IsNullOrWhiteSpace(widthField.text.Trim()))
+        {
+            width = 10;
+            height = int.Parse(heightField.text.Trim());
+        }
+        else if (string.IsNullOrWhiteSpace(heightField.text.Trim()))
+        {
+            width = int.Parse(widthField.text.Trim());
+            height = 10;
+        }
+        else
+        {
+            width = int.Parse(widthField.text.Trim());
+            height = int.Parse(heightField.text.Trim());
+        }
+        
         if (width > 0 && height > 0)
         {
+            if(generated)
+            {
+                for (int x = 0; x < cells.GetLength(0); x++)
+                {
+                    for (int y = 0; y < cells.GetLength(1); y++)
+                    {
+                        if (cells[x, y] != null)
+                        {
+                            Destroy(cells[x, y]);
+                        }
+                    }
+                }
+
+                cells = null;
+            }   
+            
             currentState = new int[width, height];
             nextState = new int[width, height];
 
@@ -185,7 +256,7 @@ public class CellularAutomata : MonoBehaviour
                 }
             }
         }
-
+        generated = true;
     }
 
     public void OnStepButtonPressed()
@@ -291,8 +362,6 @@ public class CellularAutomata : MonoBehaviour
         }
     }
 
-
-
     int[,] CopyGrid(int[,] source)
     {
         int[,] copy = new int[width, height];
@@ -307,5 +376,4 @@ public class CellularAutomata : MonoBehaviour
 
         return copy;
     }
-
 }

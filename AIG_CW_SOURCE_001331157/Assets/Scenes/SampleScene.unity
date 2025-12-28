@@ -2062,7 +2062,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1758276728}
         m_TargetAssemblyTypeName: CellularAutomata, Assembly-CSharp
-        m_MethodName: OnClearButtonPressed
+        m_MethodName: OnGenerateButtonPressed
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3006,6 +3006,8 @@ MonoBehaviour:
   step: 0
   run: 0
   state: 0
+  widthField: {fileID: 1029599989}
+  heightField: {fileID: 585759585}
 --- !u!4 &1758276729
 Transform:
   m_ObjectHideFlags: 0
