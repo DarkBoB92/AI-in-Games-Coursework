@@ -10,24 +10,32 @@ public class GridManager : MonoBehaviour
     public TMP_InputField heightField;
     public GameObject cell;
 
-    public int[,] currentState;
-    public int[,] nextState;
-    public int[,] startingState;
+    public int[,] conwayCurrent;
+    public int[,] conwayNext;
+    public int[,] bobCurrent;
+    public int[,] bobNext;
+    public int[,] conwayStarting;
+    public int[,] bobStarting;
 
     public GameObject[,] cells;
     public bool generated;
 
-    Camera mainCamera;
+    public bool running;
 
-    public Color renderColour;
+    Camera mainCamera;
 
     private void Awake()
     {
         mainCamera = Camera.main;
     }
 
-    public void OnMouseClicked()
+    public void OnMouseClicked(bool paintConway, bool paintBoB)
     {
+        if (cells == null || conwayCurrent == null || bobCurrent == null)
+        {
+            return;
+        }
+
         Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
         RaycastHit2D hit = Physics2D.Raycast(mousePosition, Vector2.zero);
@@ -44,13 +52,27 @@ public class GridManager : MonoBehaviour
                 return;
             }
 
-            currentState[x, y] = 1 - currentState[x, y];
+            if (paintBoB)
+            {
+                bobCurrent[x, y] = 1 - bobCurrent[x, y];
+            }
+
+            if (paintConway)
+            {
+                conwayCurrent[x, y] = 1 - conwayCurrent[x, y];
+            }
+
             UpdateRenderer();
         }
     }
 
     public void OnGenerateButtonPressed()
     {
+        if(running)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(widthField.text.Trim()) && string.IsNullOrWhiteSpace(heightField.text.Trim()))
         {
             width = 10;
@@ -86,12 +108,14 @@ public class GridManager : MonoBehaviour
                         }
                     }
                 }
-
                 cells = null;
             }
 
-            currentState = new int[width, height];
-            nextState = new int[width, height];
+            conwayCurrent = new int[width, height];
+            conwayNext = new int[width, height];
+
+            bobCurrent = new int[width, height];
+            bobNext = new int[width, height];
 
             cells = new GameObject[width, height];
 
@@ -105,6 +129,7 @@ public class GridManager : MonoBehaviour
             }
         }
         generated = true;
+        UpdateRenderer();
     }
 
     public void UpdateRenderer()
@@ -116,11 +141,15 @@ public class GridManager : MonoBehaviour
                 SpriteRenderer sr = cells[x, y].GetComponent<SpriteRenderer>();
                 if (sr != null)
                 {
-                    if (currentState[x, y] == 1)
+                    if (bobCurrent[x, y] == 1)
                     {
-                        sr.color = renderColour;
+                        sr.color = Color.red;
                     }
-                    else if (currentState[x, y] == 0)
+                    else if (conwayCurrent[x, y] == 1)
+                    {
+                        sr.color = Color.black;
+                    }
+                    else
                     {
                         sr.color = Color.white;
                     }

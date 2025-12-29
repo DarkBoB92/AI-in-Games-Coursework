@@ -33,68 +33,83 @@ public class CellularAutomata : MonoBehaviour
             return (Neighbourhood)neighbourhood.value;
         }
     }
-    [SerializeField] RuleSet ruleSet
-    {
-        get
-        {
-            if (bobRule != null && bobRule.isOn)
-            { 
-                return RuleSet.BoB;
-            }
-
-            return RuleSet.Conway;
-        }
-    }
-
-    private void Awake()
-    {
-        grid.renderColour = SetRenderColour(ruleSet);
-    }
 
     private void Update()
     {
         if (Input.GetMouseButtonDown(0) && !run && !active)
         {
-            if (grid != null && grid.currentState != null && grid.nextState != null && grid.cells != null)
+            if (grid != null && grid.conwayCurrent != null && grid.bobCurrent != null && grid.cells != null)
             {
-                grid.OnMouseClicked();
+                bool paintConway = (conwayRule != null && conwayRule.isOn);
+                bool paintBoB = (bobRule != null && bobRule.isOn);
+
+                if (!paintConway && !paintBoB)
+                {
+                    paintConway = true;
+                }
+
+                grid.OnMouseClicked(paintConway, paintBoB);
             }
         }
     }
 
     public IEnumerator LifeCycle()
     {
-        grid.renderColour = SetRenderColour(ruleSet);
-
         while (active)
         {
             Vector2Int[] offsets = GetNeighbourOffsets();
+
+            bool runConway = (conwayRule != null && conwayRule.isOn);
+            bool runBoB = (bobRule != null && bobRule.isOn);
+            if (!runConway && !runBoB)
+            {
+                runConway = true;
+            }
 
             for (int x = 0; x < grid.width; x++)
             {
                 for (int y = 0; y < grid.height; y++)
                 {
-                    int alive = grid.currentState[x, y];
-                    int sum = 0;
+                    int sum = GetOccupiedNeighbourSum(x, y, offsets);
 
-                    foreach (Vector2Int offset in offsets)
+                    // Checking who is occuping current tile
+                    int bobAlive = grid.bobCurrent[x, y];
+                    int conwayAlive = 0;
+
+                    if (grid.bobCurrent[x, y] == 0 && grid.conwayCurrent[x, y] == 1)
                     {
-                        int neighborX = (x + offset.x) % grid.width;
-                        if (neighborX < 0) neighborX += grid.width;
-
-                        int neighborY = (y + offset.y) % grid.height;
-                        if (neighborY < 0) neighborY += grid.height;
-
-                        sum += grid.currentState[neighborX, neighborY];
+                        conwayAlive = 1;
                     }
 
-                    NextGeneration(x, y, alive, sum);
+                    grid.conwayNext[x, y] = grid.conwayCurrent[x, y];
+                    grid.bobNext[x, y] = grid.bobCurrent[x, y];
+
+                    if (runConway)
+                    {
+                        grid.conwayNext[x, y] = ConwayRule(conwayAlive, sum);
+                    }
+
+                    if (runBoB)
+                    {
+                        grid.bobNext[x, y] = BoBRule(bobAlive, sum);
+                    }
+
+                    // Giving priority to BoB, so if the same tile BoB is alive, Conway must be dead
+                    if (grid.bobNext[x, y] == 1)
+                    {
+                        grid.conwayNext[x, y] = 0;
+                    }
                 }
             }
 
-            int[,] temporaryHolder = grid.currentState;
-            grid.currentState = grid.nextState;
-            grid.nextState = temporaryHolder;
+            int[,] tempConway = grid.conwayCurrent;
+            grid.conwayCurrent = grid.conwayNext;
+            grid.conwayNext = tempConway;
+
+            int[,] tempBoB = grid.bobCurrent;
+            grid.bobCurrent = grid.bobNext;
+            grid.bobNext = tempBoB;
+
             grid.UpdateRenderer();
             yield return new WaitForSeconds(cycleTime);
 
@@ -102,22 +117,10 @@ public class CellularAutomata : MonoBehaviour
             {
                 step = false;
                 active = false;
+                grid.running = false;
             }
         }
         lifeCoroutine = null;
-    }
-
-    public void NextGeneration(int x, int y, int alive, int sum)
-    {
-        switch (ruleSet)
-        {
-            case RuleSet.Conway:
-                grid.nextState[x, y] = ConwayRule(alive, sum);
-                break;
-            case RuleSet.BoB:
-                grid.nextState[x, y] = BoBRule(alive, sum);
-                break;
-        }
     }
 
     int ConwayRule(int alive, int sum)
@@ -310,9 +313,35 @@ public class CellularAutomata : MonoBehaviour
         }
     }
 
+    int GetOccupiedNeighbourSum(int x, int y, Vector2Int[] offsets)
+    {
+        int sum = 0;
+
+        foreach (Vector2Int offset in offsets)
+        {
+            int nx = (x + offset.x) % grid.width;
+            if (nx < 0) nx += grid.width;
+
+            int ny = (y + offset.y) % grid.height;
+            if (ny < 0) ny += grid.height;
+
+            // BoB overrides Conway
+            if (grid.bobCurrent[nx, ny] == 1)
+            {
+                sum += 1;
+            }
+            else
+            {
+                sum += grid.conwayCurrent[nx, ny];
+            }
+        }
+
+        return sum;
+    }
+
     public void OnStepButtonPressed()
     {
-        if (grid == null || grid.currentState == null || grid.nextState == null || grid.cells == null)
+        if (grid == null || grid.conwayCurrent == null || grid.bobCurrent == null || grid.cells == null)
         {
             return;
         }
@@ -325,12 +354,13 @@ public class CellularAutomata : MonoBehaviour
         step = true;
         run = false;
         active = true;
+        grid.running = true;
         lifeCoroutine = StartCoroutine(LifeCycle());
     }
 
     public void OnRunButtonPressed()
     {
-        if (grid == null || grid.currentState == null || grid.nextState == null || grid.cells == null)
+        if (grid == null || grid.conwayCurrent == null || grid.bobCurrent == null || grid.cells == null)
         {
             return;
         }
@@ -340,11 +370,13 @@ public class CellularAutomata : MonoBehaviour
             return;
         }
 
-        grid.startingState = CopyGrid(grid.currentState);
+        grid.conwayStarting = CopyGrid(grid.conwayCurrent);
+        grid.bobStarting = CopyGrid(grid.bobCurrent);
 
         run = true;
         step = false;
         active = true;
+        grid.running = true;
         lifeCoroutine = StartCoroutine(LifeCycle());
     }
 
@@ -353,6 +385,7 @@ public class CellularAutomata : MonoBehaviour
         step = false;
         run = false;
         active = false;
+        grid.running = false;
 
         if (lifeCoroutine != null)
         {
@@ -365,7 +398,8 @@ public class CellularAutomata : MonoBehaviour
     {
         if (!run && !active)
         {
-            grid.startingState = CopyGrid(grid.currentState);
+            grid.conwayStarting = CopyGrid(grid.conwayCurrent);
+            grid.bobStarting = CopyGrid(grid.bobCurrent);
         }
     }
 
@@ -373,9 +407,10 @@ public class CellularAutomata : MonoBehaviour
     {
         if (!run && !active)
         {
-            if (grid.startingState != null)
+            if (grid.conwayStarting != null && grid.bobStarting != null)
             {
-                grid.currentState = CopyGrid(grid.startingState);
+                grid.conwayCurrent = CopyGrid(grid.conwayStarting);
+                grid.bobCurrent = CopyGrid(grid.bobStarting);
                 grid.UpdateRenderer();
             }
         }
@@ -385,18 +420,11 @@ public class CellularAutomata : MonoBehaviour
             {
                 for (int y = 0; y < grid.height; y++)
                 {
-                    SpriteRenderer sr = grid.cells[x, y].GetComponent<SpriteRenderer>();
-                    if (sr != null)
-                    {
-                        if (grid.currentState[x, y] == 1)
-                        {
-                            grid.currentState[x, y] = 0;
-                            sr.color = Color.white;
-                        }
-                    }
-
+                    grid.conwayCurrent[x, y] = 0;
+                    grid.bobCurrent[x, y] = 0;
                 }
             }
+            grid.UpdateRenderer();
         }
     }
 
@@ -408,18 +436,11 @@ public class CellularAutomata : MonoBehaviour
             {
                 for (int y = 0; y < grid.height; y++)
                 {
-                    SpriteRenderer sr = grid.cells[x, y].GetComponent<SpriteRenderer>();
-                    if (sr != null)
-                    {
-                        if (grid.currentState[x, y] == 1)
-                        {
-                            grid.currentState[x, y] = 0;
-                            sr.color = Color.white;
-                        }
-                    }
-
+                    grid.conwayCurrent[x, y] = 0;
+                    grid.bobCurrent[x, y] = 0;
                 }
             }
+            grid.UpdateRenderer();
         }
     }
 
@@ -436,17 +457,5 @@ public class CellularAutomata : MonoBehaviour
         }
 
         return copy;
-    }
-
-    public static Color SetRenderColour(RuleSet ruleSet)
-    {
-        switch (ruleSet)
-        {
-            case RuleSet.Conway:
-            default:
-                return Color.black;
-            case RuleSet.BoB:
-                return Color.red;
-        }
     }
 }

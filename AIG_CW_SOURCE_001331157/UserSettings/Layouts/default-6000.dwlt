@@ -19,7 +19,7 @@ MonoBehaviour:
     width: 1920
     height: 989
   m_ShowMode: 4
-  m_Title: Project
+  m_Title: Game
   m_RootView: {fileID: 2}
   m_MinSize: {x: 875, y: 300}
   m_MaxSize: {x: 10000, y: 10000}
@@ -461,7 +461,7 @@ MonoBehaviour:
       scrollPos: {x: 0, y: 0}
       m_SelectedIDs: 
       m_LastClickedID: 0
-      m_ExpandedIDs: 06fbffffa6b30000
+      m_ExpandedIDs: 689cffffac9cffffba9cffffc89cffff32b8ffff3eb8ffff92b8ffffa0b8ffffc8b8ffff06fbffff
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -1065,9 +1065,9 @@ MonoBehaviour:
   m_AudioPlay: 0
   m_DebugDrawModesUseInteractiveLightBakingData: 0
   m_Position:
-    m_Target: {x: 673.60034, y: 407.4685, z: 24.107788}
+    m_Target: {x: 727.86926, y: 312.08777, z: 754.4427}
     speed: 2
-    m_Value: {x: 673.60034, y: 407.4685, z: 24.107788}
+    m_Value: {x: 727.86926, y: 312.08777, z: 754.4427}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 0
@@ -1113,13 +1113,13 @@ MonoBehaviour:
     m_GridAxis: 1
     m_gridOpacity: 0.5
   m_Rotation:
-    m_Target: {x: -0.055775672, y: -0.008884253, z: 0.0005127494, w: -0.99832785}
+    m_Target: {x: 0.04015306, y: 0.031565055, z: 0.0013116885, w: -0.9986099}
     speed: 2
-    m_Value: {x: -0.055775676, y: -0.008884254, z: 0.0005127494, w: -0.9983279}
+    m_Value: {x: 0.040153056, y: 0.031565055, z: 0.0013116883, w: -0.99860984}
   m_Size:
-    m_Target: 351.0776
+    m_Target: 667.15155
     speed: 2
-    m_Value: 351.0776
+    m_Value: 667.15155
   m_Ortho:
     m_Target: 0
     speed: 2
@@ -1381,9 +1381,9 @@ MonoBehaviour:
     m_IsLocked: 0
   m_FolderTreeState:
     scrollPos: {x: 0, y: 0}
-    m_SelectedIDs: 06b60000
-    m_LastClickedID: 46598
-    m_ExpandedIDs: 000000009ab50000
+    m_SelectedIDs: 0ab60000
+    m_LastClickedID: 46602
+    m_ExpandedIDs: 0000000042b60000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1412,7 +1412,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 
     m_LastClickedID: 0
-    m_ExpandedIDs: 000000009ab50000
+    m_ExpandedIDs: 0000000042b60000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
