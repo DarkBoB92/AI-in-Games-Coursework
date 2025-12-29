@@ -1,88 +1,101 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
-public enum State { Standard, Plus, Cross, Up2, Right2, Left2, Down2 }
+public enum Neighbourhood { Moore, Plus, Cross, Up2, Right2, Left2, Down2 }
+public enum RuleSet { Conway, BoB }
 
 public class CellularAutomata : MonoBehaviour
 {
-    public int[,] currentState;
-    public int[,] nextState;
-    public int[,] startingState;
-    public int width;
-    public int height;
-    public GameObject cell;
-    public GameObject[,] cells;
+    public GridManager grid;
+
     public float cycleTime = 1;
+ 
     public bool active;
     public bool step;
     public bool run;
+    
     Coroutine lifeCoroutine;
-    [SerializeField] State state;
-    public TMP_InputField widthField;
-    public TMP_InputField heightField;
-    public bool generated;
+    
+    public Toggle conwayRule;
+    public Toggle bobRule;
+    public TMP_Dropdown neighbourhood;
+    [SerializeField] Neighbourhood neighbour
+    {
+        get
+        {
+            if (neighbourhood == null)
+            {
+                return Neighbourhood.Moore;
+            }
+
+            return (Neighbourhood)neighbourhood.value;
+        }
+    }
+    [SerializeField] RuleSet ruleSet
+    {
+        get
+        {
+            if (bobRule != null && bobRule.isOn)
+            { 
+                return RuleSet.BoB;
+            }
+
+            return RuleSet.Conway;
+        }
+    }
+
+    private void Awake()
+    {
+        grid.renderColour = SetRenderColour(ruleSet);
+    }
 
     private void Update()
     {
         if (Input.GetMouseButtonDown(0) && !run && !active)
         {
-            OnMouseClicked();
+            if (grid != null && grid.currentState != null && grid.nextState != null && grid.cells != null)
+            {
+                grid.OnMouseClicked();
+            }
         }
     }
 
     public IEnumerator LifeCycle()
     {
+        grid.renderColour = SetRenderColour(ruleSet);
+
         while (active)
         {
-            for (int x = 0; x < width; x++)
+            Vector2Int[] offsets = GetNeighbourOffsets();
+
+            for (int x = 0; x < grid.width; x++)
             {
-                for (int y = 0; y < height; y++)
+                for (int y = 0; y < grid.height; y++)
                 {
-                    int state = currentState[x, y];
+                    int alive = grid.currentState[x, y];
                     int sum = 0;
-                    Vector2Int[] offsets = GetNeighbourOffsets();
 
                     foreach (Vector2Int offset in offsets)
                     {
-                        int neighborX = (x + offset.x) % width;
-                        if (neighborX < 0) neighborX += width;
+                        int neighborX = (x + offset.x) % grid.width;
+                        if (neighborX < 0) neighborX += grid.width;
 
-                        int neighborY = (y + offset.y) % height;
-                        if (neighborY < 0) neighborY += height;
+                        int neighborY = (y + offset.y) % grid.height;
+                        if (neighborY < 0) neighborY += grid.height;
 
-                        sum += currentState[neighborX, neighborY];
+                        sum += grid.currentState[neighborX, neighborY];
                     }
 
-                    if (state == 0)
-                    {
-                        if (sum == 3)
-                        {
-                            nextState[x, y] = 1;
-                        }
-                        else
-                        {
-                            nextState[x, y] = 0;
-                        }
-                    }
-                    else
-                    {
-                        if (sum == 2 || sum == 3)
-                        {
-                            nextState[x, y] = 1;
-                        }
-                        else
-                        {
-                            nextState[x, y] = 0;
-                        }
-                    }
+                    NextGeneration(x, y, alive, sum);
                 }
             }
 
-            int[,] temporaryHolder = currentState;
-            currentState = nextState;
-            nextState = temporaryHolder;
-            UpdateRenderer();
+            int[,] temporaryHolder = grid.currentState;
+            grid.currentState = grid.nextState;
+            grid.nextState = temporaryHolder;
+            grid.UpdateRenderer();
             yield return new WaitForSeconds(cycleTime);
 
             if(step)
@@ -94,34 +107,153 @@ public class CellularAutomata : MonoBehaviour
         lifeCoroutine = null;
     }
 
-    void UpdateRenderer()
-    {        
-        for (int x = 0; x < width; x++)
+    public void NextGeneration(int x, int y, int alive, int sum)
+    {
+        switch (ruleSet)
         {
-            for (int y = 0; y < height; y++)
+            case RuleSet.Conway:
+                grid.nextState[x, y] = ConwayRule(alive, sum);
+                break;
+            case RuleSet.BoB:
+                grid.nextState[x, y] = BoBRule(alive, sum);
+                break;
+        }
+    }
+
+    int ConwayRule(int alive, int sum)
+    {
+        if (alive == 0)
+        {
+            if (sum == 3)
             {
-                SpriteRenderer sr = cells[x, y].GetComponent<SpriteRenderer>();
-                if (sr != null)
+                return 1;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+        else
+        {
+            if (sum == 2 || sum == 3)
+            {
+                return 1;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+    }
+
+    int BoBRule(int alive, int sum)
+    {
+        switch (neighbour)
+        {
+            case Neighbourhood.Plus:
+                if (alive == 0)
                 {
-                    if (currentState[x, y] == 1)
+                    if (sum == 2)
                     {
-                        sr.color = Color.black;
+                        return 1;
                     }
-                    else if (currentState[x, y] == 0)
+                    else
                     {
-                        sr.color = Color.white;
+                        return 0;
                     }
                 }
-
-            }
+                else
+                {
+                    if (sum == 1 || sum == 2)
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+            case Neighbourhood.Cross:
+                if (alive == 0)
+                {
+                    if (sum == 1)
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+                else
+                {
+                    if (sum == 1 || sum == 2)
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+            case Neighbourhood.Up2:
+            case Neighbourhood.Right2:
+            case Neighbourhood.Down2:
+            case Neighbourhood.Left2:
+                if (alive == 0)
+                {
+                    if (sum == 2 || sum == 3)
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+                else
+                {
+                    if (sum >= 2 && sum <= 4)
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+            case Neighbourhood.Moore:
+            default:
+                if (alive == 0)
+                {
+                    if (sum >= 3 && sum <= 6)
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+                else
+                {
+                    if (sum % 2 == 1)
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
         }
     }
 
     Vector2Int[] GetNeighbourOffsets()
     {
-        switch (state)
+        switch (neighbour)
         {
-            case State.Plus: // up/down/left/right
+            case Neighbourhood.Plus: // Plus Neighborhood 
                 return new Vector2Int[]
                 {
                 new Vector2Int(0, 1),
@@ -130,7 +262,7 @@ public class CellularAutomata : MonoBehaviour
                 new Vector2Int(-1, 0),
                 };
 
-            case State.Cross: // diagonals only
+            case Neighbourhood.Cross: // Cross Neighborhood
                 return new Vector2Int[]
                 {
                 new Vector2Int(-1, 1),
@@ -139,35 +271,35 @@ public class CellularAutomata : MonoBehaviour
                 new Vector2Int(1, -1),
                 };
 
-            case State.Up2: // 2x3 blocks above
+            case Neighbourhood.Up2: // 2x3 Blocks Above Neighborhood
                 return new Vector2Int[]
                 {
                 new Vector2Int(-1, 1), new Vector2Int(0, 1), new Vector2Int(1, 1),
                 new Vector2Int(-1, 2), new Vector2Int(0, 2), new Vector2Int(1, 2),
                 };
 
-            case State.Down2: // 2x3 blocks below
+            case Neighbourhood.Down2: // 2x3 Blocks Below Neighborhood
                 return new Vector2Int[]
                 {
                 new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(1, -1),
                 new Vector2Int(-1, -2), new Vector2Int(0, -2), new Vector2Int(1, -2),
                 };
 
-            case State.Right2: // 2x3 blocks right
+            case Neighbourhood.Right2: // 2x3 Blocks Right Neighborhood
                 return new Vector2Int[]
                 {
                 new Vector2Int(1, -1), new Vector2Int(1, 0), new Vector2Int(1, 1),
                 new Vector2Int(2, -1), new Vector2Int(2, 0), new Vector2Int(2, 1),
                 };
 
-            case State.Left2: // 2x3 blocks left
+            case Neighbourhood.Left2: // 2x3 Blocks Left Neighborhood
                 return new Vector2Int[]
                 {
                 new Vector2Int(-1, -1), new Vector2Int(-1, 0), new Vector2Int(-1, 1),
                 new Vector2Int(-2, -1), new Vector2Int(-2, 0), new Vector2Int(-2, 1),
                 };
 
-            case State.Standard: // classic 
+            case Neighbourhood.Moore: // Moore Neighborhood
             default:
                 return new Vector2Int[]
                 {
@@ -178,89 +310,13 @@ public class CellularAutomata : MonoBehaviour
         }
     }
 
-    void OnMouseClicked()
-    {
-        Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-
-        RaycastHit2D hit = Physics2D.Raycast(mousePosition, Vector2.zero);
-
-        if (hit.collider != null && hit.collider.CompareTag("Cell"))
-        {
-            Vector3 hittedCell = hit.collider.transform.position;
-
-            int x = Mathf.RoundToInt(hittedCell.x);
-            int y = Mathf.RoundToInt(hittedCell.y);
-
-            if (x < 0 || x >= width || y < 0 || y >= height)
-            {
-                return;
-            }
-
-            currentState[x, y] = 1 - currentState[x, y];
-            UpdateRenderer();
-        }
-    }
-
-    public void OnGenerateButtonPressed()
-    {
-        if (string.IsNullOrWhiteSpace(widthField.text.Trim()) && string.IsNullOrWhiteSpace(heightField.text.Trim()))
-        {
-            width = 10;
-            height = 10;
-        }
-        else if(string.IsNullOrWhiteSpace(widthField.text.Trim()))
-        {
-            width = 10;
-            height = int.Parse(heightField.text.Trim());
-        }
-        else if (string.IsNullOrWhiteSpace(heightField.text.Trim()))
-        {
-            width = int.Parse(widthField.text.Trim());
-            height = 10;
-        }
-        else
-        {
-            width = int.Parse(widthField.text.Trim());
-            height = int.Parse(heightField.text.Trim());
-        }
-        
-        if (width > 0 && height > 0)
-        {
-            if(generated)
-            {
-                for (int x = 0; x < cells.GetLength(0); x++)
-                {
-                    for (int y = 0; y < cells.GetLength(1); y++)
-                    {
-                        if (cells[x, y] != null)
-                        {
-                            Destroy(cells[x, y]);
-                        }
-                    }
-                }
-
-                cells = null;
-            }   
-            
-            currentState = new int[width, height];
-            nextState = new int[width, height];
-
-            cells = new GameObject[width, height];
-
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    GameObject go = Instantiate(cell, new Vector3(x, y, 0), Quaternion.identity);
-                    cells[x, y] = go;
-                }
-            }
-        }
-        generated = true;
-    }
-
     public void OnStepButtonPressed()
     {
+        if (grid == null || grid.currentState == null || grid.nextState == null || grid.cells == null)
+        {
+            return;
+        }
+
         if (lifeCoroutine != null)
         {
             return;
@@ -274,12 +330,17 @@ public class CellularAutomata : MonoBehaviour
 
     public void OnRunButtonPressed()
     {
+        if (grid == null || grid.currentState == null || grid.nextState == null || grid.cells == null)
+        {
+            return;
+        }
+
         if (lifeCoroutine != null)
         {
             return;
         }
 
-        startingState = CopyGrid(currentState);
+        grid.startingState = CopyGrid(grid.currentState);
 
         run = true;
         step = false;
@@ -304,7 +365,7 @@ public class CellularAutomata : MonoBehaviour
     {
         if (!run && !active)
         {
-            startingState = CopyGrid(currentState);
+            grid.startingState = CopyGrid(grid.currentState);
         }
     }
 
@@ -312,24 +373,24 @@ public class CellularAutomata : MonoBehaviour
     {
         if (!run && !active)
         {
-            if (startingState != null)
+            if (grid.startingState != null)
             {
-                currentState = CopyGrid(startingState);
-                UpdateRenderer();
+                grid.currentState = CopyGrid(grid.startingState);
+                grid.UpdateRenderer();
             }
         }
         else
         {
-            for (int x = 0; x < width; x++)
+            for (int x = 0; x < grid.width; x++)
             {
-                for (int y = 0; y < height; y++)
+                for (int y = 0; y < grid.height; y++)
                 {
-                    SpriteRenderer sr = cells[x, y].GetComponent<SpriteRenderer>();
+                    SpriteRenderer sr = grid.cells[x, y].GetComponent<SpriteRenderer>();
                     if (sr != null)
                     {
-                        if (currentState[x, y] == 1)
+                        if (grid.currentState[x, y] == 1)
                         {
-                            currentState[x, y] = 0;
+                            grid.currentState[x, y] = 0;
                             sr.color = Color.white;
                         }
                     }
@@ -343,16 +404,16 @@ public class CellularAutomata : MonoBehaviour
     {
         if (!run && !active)
         {
-            for (int x = 0; x < width; x++)
+            for (int x = 0; x < grid.width; x++)
             {
-                for (int y = 0; y < height; y++)
+                for (int y = 0; y < grid.height; y++)
                 {
-                    SpriteRenderer sr = cells[x, y].GetComponent<SpriteRenderer>();
+                    SpriteRenderer sr = grid.cells[x, y].GetComponent<SpriteRenderer>();
                     if (sr != null)
                     {
-                        if (currentState[x, y] == 1)
+                        if (grid.currentState[x, y] == 1)
                         {
-                            currentState[x, y] = 0;
+                            grid.currentState[x, y] = 0;
                             sr.color = Color.white;
                         }
                     }
@@ -364,16 +425,28 @@ public class CellularAutomata : MonoBehaviour
 
     int[,] CopyGrid(int[,] source)
     {
-        int[,] copy = new int[width, height];
+        int[,] copy = new int[grid.width, grid.height];
 
-        for (int x = 0; x < width; x++)
+        for (int x = 0; x < grid.width; x++)
         {
-            for (int y = 0; y < height; y++)
+            for (int y = 0; y < grid.height; y++)
             {
                 copy[x, y] = source[x, y];
             }
         }
 
         return copy;
+    }
+
+    public static Color SetRenderColour(RuleSet ruleSet)
+    {
+        switch (ruleSet)
+        {
+            case RuleSet.Conway:
+            default:
+                return Color.black;
+            case RuleSet.BoB:
+                return Color.red;
+        }
     }
 }
