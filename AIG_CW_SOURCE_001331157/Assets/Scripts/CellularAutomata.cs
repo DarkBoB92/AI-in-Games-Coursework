@@ -70,34 +70,77 @@ public class CellularAutomata : MonoBehaviour
             {
                 for (int y = 0; y < grid.height; y++)
                 {
-                    int sum = GetOccupiedNeighbourSum(x, y, offsets);
+                    GetNeighbourSums(x, y, offsets, out int conwaySum, out int bobSum);
 
-                    // Checking who is occuping current tile
+                    int conwayAlive = grid.conwayCurrent[x, y];
                     int bobAlive = grid.bobCurrent[x, y];
-                    int conwayAlive = 0;
 
-                    if (grid.bobCurrent[x, y] == 0 && grid.conwayCurrent[x, y] == 1)
+                    int conwayCandidate;
+                    int bobCandidate;
+
+                    if(runConway)
                     {
-                        conwayAlive = 1;
+                        conwayCandidate = ConwayRule(conwayAlive, conwaySum);
                     }
-
-                    grid.conwayNext[x, y] = grid.conwayCurrent[x, y];
-                    grid.bobNext[x, y] = grid.bobCurrent[x, y];
-
-                    if (runConway)
+                    else
                     {
-                        grid.conwayNext[x, y] = ConwayRule(conwayAlive, sum);
+                        conwayCandidate = conwayAlive;
                     }
 
                     if (runBoB)
                     {
-                        grid.bobNext[x, y] = BoBRule(bobAlive, sum);
+                        bobCandidate = BoBRule(bobAlive, bobSum);
+                    }
+                    else
+                    {
+                        bobCandidate = bobAlive;
                     }
 
-                    // Giving priority to BoB, so if the same tile BoB is alive, Conway must be dead
-                    if (grid.bobNext[x, y] == 1)
+                    if (conwayCandidate == 1 && bobCandidate == 0)
+                    {
+                        grid.conwayNext[x, y] = 1;
+                        grid.bobNext[x, y] = 0;
+                    }
+                    else if (conwayCandidate == 0 && bobCandidate == 1)
                     {
                         grid.conwayNext[x, y] = 0;
+                        grid.bobNext[x, y] = 1;
+                    }
+                    else if (conwayCandidate == 1 && bobCandidate == 1)
+                    {
+                        if (conwaySum > bobSum)
+                        {
+                            grid.conwayNext[x, y] = 1;
+                            grid.bobNext[x, y] = 0;
+                        }
+                        else if (bobSum > conwaySum)
+                        {
+                            grid.conwayNext[x, y] = 0;
+                            grid.bobNext[x, y] = 1;
+                        }
+                        else
+                        {
+                            if (bobAlive == 1)
+                            {
+                                grid.conwayNext[x, y] = 0;
+                                grid.bobNext[x, y] = 1;
+                            }
+                            else if (conwayAlive == 1)
+                            {
+                                grid.conwayNext[x, y] = 1;
+                                grid.bobNext[x, y] = 0;
+                            }
+                            else
+                            {
+                                grid.conwayNext[x, y] = 0;
+                                grid.bobNext[x, y] = 0;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        grid.conwayNext[x, y] = 0;
+                        grid.bobNext[x, y] = 0;
                     }
                 }
             }
@@ -313,9 +356,10 @@ public class CellularAutomata : MonoBehaviour
         }
     }
 
-    int GetOccupiedNeighbourSum(int x, int y, Vector2Int[] offsets)
+    void GetNeighbourSums(int x, int y, Vector2Int[] offsets, out int conwaySum, out int bobSum)
     {
-        int sum = 0;
+        conwaySum = 0;
+        bobSum = 0;
 
         foreach (Vector2Int offset in offsets)
         {
@@ -325,18 +369,9 @@ public class CellularAutomata : MonoBehaviour
             int ny = (y + offset.y) % grid.height;
             if (ny < 0) ny += grid.height;
 
-            // BoB overrides Conway
-            if (grid.bobCurrent[nx, ny] == 1)
-            {
-                sum += 1;
-            }
-            else
-            {
-                sum += grid.conwayCurrent[nx, ny];
-            }
+            conwaySum += grid.conwayCurrent[nx, ny];
+            bobSum += grid.bobCurrent[nx, ny];
         }
-
-        return sum;
     }
 
     public void OnStepButtonPressed()
