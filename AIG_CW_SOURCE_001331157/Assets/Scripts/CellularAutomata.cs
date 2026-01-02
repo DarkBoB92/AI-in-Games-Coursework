@@ -3,7 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public enum Neighbourhood { Moore, Plus, Cross, Up2, Right2, Left2, Down2 }
+public enum Neighbourhood { Moore, Plus, Cross, Up2, Down2, Right2, Left2 }
 public enum RuleSet { Conway, BoB }
 
 public class CellularAutomata : MonoBehaviour
@@ -59,13 +59,6 @@ public class CellularAutomata : MonoBehaviour
         {
             Vector2Int[] offsets = GetNeighbourOffsets();
 
-            bool runConway = (conwayRule != null && conwayRule.isOn);
-            bool runBoB = (bobRule != null && bobRule.isOn);
-            if (!runConway && !runBoB)
-            {
-                runConway = true;
-            }
-
             for (int x = 0; x < grid.width; x++)
             {
                 for (int y = 0; y < grid.height; y++)
@@ -78,7 +71,14 @@ public class CellularAutomata : MonoBehaviour
                     int conwayCandidate;
                     int bobCandidate;
 
-                    if(runConway)
+                    bool runConway = (conwayRule != null && conwayRule.isOn);
+                    bool runBoB = (bobRule != null && bobRule.isOn);
+                    if (!runConway && !runBoB)
+                    {
+                        runConway = true;
+                    }
+
+                    if (runConway)
                     {
                         conwayCandidate = ConwayRule(conwayAlive, conwaySum);
                     }
@@ -243,8 +243,8 @@ public class CellularAutomata : MonoBehaviour
                     }
                 }
             case Neighbourhood.Up2:
-            case Neighbourhood.Right2:
             case Neighbourhood.Down2:
+            case Neighbourhood.Right2:
             case Neighbourhood.Left2:
                 if (alive == 0)
                 {
@@ -283,7 +283,7 @@ public class CellularAutomata : MonoBehaviour
                 }
                 else
                 {
-                    if (sum % 2 == 1)
+                    if (sum % 2 != 0)
                     {
                         return 1;
                     }
@@ -302,56 +302,58 @@ public class CellularAutomata : MonoBehaviour
             case Neighbourhood.Plus: // Plus Neighborhood 
                 return new Vector2Int[]
                 {
-                new Vector2Int(0, 1),
-                new Vector2Int(0, -1),
-                new Vector2Int(1, 0),
-                new Vector2Int(-1, 0),
+                                           new Vector2Int(0, 1), 
+                    new Vector2Int(-1, 0),         /*Cell*/       new Vector2Int(1, 0),
+                                           new Vector2Int(0, -1),
                 };
 
             case Neighbourhood.Cross: // Cross Neighborhood
                 return new Vector2Int[]
                 {
-                new Vector2Int(-1, 1),
-                new Vector2Int(1, 1),
-                new Vector2Int(-1, -1),
-                new Vector2Int(1, -1),
+                    new Vector2Int(-1, 1),                    new Vector2Int(1, 1),
+                                                 /*Cell*/
+                    new Vector2Int(-1, -1),                    new Vector2Int(1, -1),
                 };
 
             case Neighbourhood.Up2: // 2x3 Blocks Above Neighborhood
                 return new Vector2Int[]
                 {
-                new Vector2Int(-1, 1), new Vector2Int(0, 1), new Vector2Int(1, 1),
-                new Vector2Int(-1, 2), new Vector2Int(0, 2), new Vector2Int(1, 2),
+                    new Vector2Int(-1, 2), new Vector2Int(0, 2), new Vector2Int(1, 2),
+                    new Vector2Int(-1, 1), new Vector2Int(0, 1), new Vector2Int(1, 1),
+                                                   /*Cell*/
                 };
 
             case Neighbourhood.Down2: // 2x3 Blocks Below Neighborhood
                 return new Vector2Int[]
                 {
-                new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(1, -1),
-                new Vector2Int(-1, -2), new Vector2Int(0, -2), new Vector2Int(1, -2),
+                                                   /*Cell*/
+                    new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(1, -1),
+                    new Vector2Int(-1, -2), new Vector2Int(0, -2), new Vector2Int(1, -2),
                 };
 
             case Neighbourhood.Right2: // 2x3 Blocks Right Neighborhood
                 return new Vector2Int[]
                 {
-                new Vector2Int(1, -1), new Vector2Int(1, 0), new Vector2Int(1, 1),
-                new Vector2Int(2, -1), new Vector2Int(2, 0), new Vector2Int(2, 1),
+                            new Vector2Int(1, 1), new Vector2Int(2, 1),
+                    /*Cell*/new Vector2Int(1, 0), new Vector2Int(2, 0),
+                            new Vector2Int(1, -1), new Vector2Int(2, -1)
                 };
 
             case Neighbourhood.Left2: // 2x3 Blocks Left Neighborhood
                 return new Vector2Int[]
                 {
-                new Vector2Int(-1, -1), new Vector2Int(-1, 0), new Vector2Int(-1, 1),
-                new Vector2Int(-2, -1), new Vector2Int(-2, 0), new Vector2Int(-2, 1),
+                      new Vector2Int(-2, 1), new Vector2Int(-1, 1),
+                      new Vector2Int(-2, 0), new Vector2Int(-1, 0),/*Cell*/
+                    new Vector2Int(-2, -1), new Vector2Int(-1, -1),
                 };
 
             case Neighbourhood.Moore: // Moore Neighborhood
             default:
                 return new Vector2Int[]
                 {
-                new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(1, -1),
-                new Vector2Int(-1,  0),                      new Vector2Int(1,  0),
-                new Vector2Int(-1,  1), new Vector2Int(0,  1), new Vector2Int(1,  1),
+                    new Vector2Int(-1, -1), new Vector2Int(0, -1), new Vector2Int(1, -1),
+                    new Vector2Int(-1,  0),        /*Cell*/        new Vector2Int(1,  0),
+                    new Vector2Int(-1,  1), new Vector2Int(0,  1), new Vector2Int(1,  1),
                 };
         }
     }
